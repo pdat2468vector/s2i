@@ -69,4 +69,4 @@ The code is released under the MIT licence (`LICENSE`). The fonts in `s2i/fonts/
 
 ## Citation
 
-[Citation and DOI to be added.]
+Code archive: doi:[10.5281/zenodo.23826236](https://doi.org/10.5281/zenodo.23826236) (release v1.0). The citation of the manuscript will be added on publication.
