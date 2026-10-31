@@ -53,7 +53,7 @@ Dependencies are listed in `requirements.txt`. Colab provides most of them, and 
 | Leave-one-cohort-out training and training-set size (Table S19) | Phase 34 | `s2i/loco34.py` |
 | Deep baselines at the primary level with strict normalisation (Table S20) | Phase 36 | `s2i/strict36.py`, `s2i/train_loso.py`, `s2i/nfn_baseline.py` |
 | CAST re-run under the present protocol, with positive control (Table S21) | Phase 37 | `s2i/cast37.py` |
-| Figures | Phases 22, 32, and 33 | `s2i/figs11.py`, `s2i/paperfigs.py`, `s2i/render3d.py` |
+| Figures (Fig. 2b with every model at the primary level: Phase 38) | Phases 22, 32, 33, and 38 | `s2i/figs11.py`, `s2i/paperfigs.py`, `s2i/render3d.py` |
 
 ## Protocols
 

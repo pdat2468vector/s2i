@@ -18,6 +18,7 @@ Usage
   python -m s2i.figs11 --runs RUNS_DIR --out FIG_DIR [--only fig2]
 """
 import argparse
+import glob
 import json
 import os
 import zlib
@@ -30,7 +31,7 @@ import matplotlib.pyplot as plt                                    # noqa: E402
 from matplotlib.lines import Line2D                                # noqa: E402
 
 from s2i import figstyle as st                                     # noqa: E402  (beeswarm, fmt, fonts)
-from s2i.paperfigs import (find_leadformer, load_dir, load_strict, paired, STRICT)  # noqa: E402
+from s2i.paperfigs import (load_dir, load_strict, paired, STRICT)  # noqa: E402
 
 MM = 1 / 25.4
 W2, W1 = 150.0, 85.0
@@ -250,17 +251,31 @@ def fig2(runs, out):
     cv.letter(2, 91.5, "a", "Every patient improves")
     nums["a"]["gain_axis_max"] = gmax
 
-    # ---------------- b: all models on the same trials (secondary level, session-wise normalisation)
-    T5 = load_dir(os.path.join(main_run, "readout_combo5"), "readout_")
-    TF = load_dir(os.path.join(noenv, "readout_fixed"), "readout_")
-    nfn = {s: d["models"]["nfn_mode"]["r"] for s, d in load_dir(os.path.join(runs, "nfn_baseline"), "nfn_").items()}
-    rows = [("final model", model_rx(T5, "combo"), OURS), ("fixed bank", model_rx(TF, "combo"), FIXED),
-            ("LAG9 ridge", model_rx(T5, "base"), BASE), ("LeadFormer", find_leadformer(runs), BASE),
-            ("NeuroFlowNet", nfn, BASE)]
+    # ---------------- b: every model on the same patients and test trials (primary level, strict normalisation;
+    # deep baselines of Phase 36, CAST of Phase 37, the same sources as strict36 / cast37 report)
+    from s2i.parm27 import _ex, _load
+    shallow = _ex(_load(os.path.join(runs, "shared_shallow"), "p36_learned"), "combo_nosess")
+    lf, nfn, cast = {}, {}, {}
+    for f in glob.glob(os.path.join(runs, "p36_leadformer", "fold_sub-*.json")):
+        fo = json.load(open(f))
+        if "calibrated" in fo:
+            lf[fo["subject"]] = float(np.nanmean(fo["calibrated"]["r"]))
+    for f in glob.glob(os.path.join(runs, "p36_nfn", "nfn_sub-*.json")):
+        fo = json.load(open(f))
+        if "nfn_mode" in fo.get("models", {}):
+            nfn[fo["subject"]] = float(fo["models"]["nfn_mode"]["r"])
+    for f in glob.glob(os.path.join(runs, "p37_cast", "cast_sub-*.json")):
+        fo = json.load(open(f))
+        if "r" in fo:
+            cast[fo["subject"]] = float(fo["r"])
+    rows = [("final model", model_rx(S5, "combo_nosess"), OURS), ("fixed bank", model_rx(SF, "combo_nosess"), FIXED),
+            ("ShallowConvNet-style", shallow, BASE), ("LAG9 ridge", model_rx(S5, "base"), BASE),
+            ("LeadFormer", lf, BASE), ("NeuroFlowNet", nfn, BASE), ("CAST", cast, BASE)]
     rows = [r for r in rows if r[1]]
+    rows = rows[:2] + sorted(rows[2:], key=lambda r: -np.mean(list(r[1].values())))   # baselines by mean r
     axb = cv.ax(103, 55, 35, 31)
-    nums["b"] = {}
-    xmax = 0.0
+    nums["b"] = {"level": "primary, strict normalisation"}
+    xmax, xmin = 0.0, 0.0
     for k, (name, d, col) in enumerate(rows):
         y = len(rows) - 1 - k
         v = np.array(list(d.values()), float)
@@ -275,11 +290,14 @@ def fig2(runs, out):
                  fontweight="bold" if k == 0 else "normal")
         nums["b"][name] = {"n": len(v), "mean": float(v.mean()), "ci": [lo_, hi_]}
         xmax = max(xmax, np.ceil(v.max() * 20) / 20 + 0.01)
+        xmin = min(xmin, np.floor(v.min() * 20) / 20)
     axb.set_yticks(range(len(rows)), [r[0] for r in rows][::-1])
     for t, r in zip(axb.get_yticklabels(), rows[::-1]):
         t.set_color({BASE: INK2, FIXED: FIXED_TXT}.get(r[2], r[2]))
-    axb.set_xlim(0, xmax)
-    xv = np.round(np.arange(0, xmax + 1e-9, 0.1), 1)
+    axb.set_xlim(xmin - (0.01 if xmin < 0 else 0), xmax)
+    if xmin < 0:
+        axb.axvline(0, color=MUTE, lw=0.6, zorder=0)
+    xv = np.round(np.arange(np.ceil(xmin * 10) / 10, xmax + 1e-9, 0.1), 1)
     axb.set_xticks(xv, [tl(v) for v in xv])
     axb.set_ylim(-0.6, len(rows) - 0.4)
     cat_axis(axb)
