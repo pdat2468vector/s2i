@@ -1,0 +1,10 @@
+# Versions used on Google Colab (October 2026); Colab provides torch, numpy, scipy, pandas, matplotlib, and h5py.
+torch>=2.0
+numpy
+scipy
+pandas
+matplotlib
+h5py
+mne==1.13.2
+nilearn
+statsmodels
